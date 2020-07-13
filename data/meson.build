@@ -64,12 +64,6 @@ test (
 )
 
 test (
-    'Validate appdata file',
-    find_program ('appstreamcli'),
-    args: ['validate', '--pedantic', join_paths (meson.current_build_dir (), meson.project_name () + '.appdata.xml')]
-)
-
-test (
     'Validate gschema file',
     find_program ('glib-compile-schemas'),
     args: ['--dry-run', '--strict', join_paths (meson.current_source_dir (), 'schemas')]
