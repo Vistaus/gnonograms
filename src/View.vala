@@ -177,6 +177,9 @@ public class View : Gtk.ApplicationWindow {
     }
 
     construct {
+        Gtk.Settings.get_default ().set_property ("gtk-theme-name", "elementary");
+        Gtk.Settings.get_default ().set_property ("gtk-icon-theme-name", "elementary");
+
         var view_actions = new GLib.SimpleActionGroup ();
         view_actions.add_action_entries (VIEW_ACTION_ENTRIES, this);
         view_actions.add_action_entries (VIEW_ACTION_ENTRIES, this);
