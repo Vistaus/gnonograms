@@ -380,7 +380,7 @@ namespace Utils {
                 dialog.add_filter (fc);
             }
 
-        dialog.local_only = false;
+        dialog.local_only = true;
         Gtk.Switch? save_solution_switch = null;
 
         //only need access to built-in puzzle directory if loading a .gno puzzle
@@ -404,11 +404,17 @@ namespace Utils {
             grid.show_all ();
         }
 
-        if (start_path == null) {
-            start_path = Environment.get_home_dir ();
+        var path = Path.build_filename (Environment.get_home_dir (), ".local", "share", Gnonograms.APP_ID);
+        var folder = File.new_for_path (path);
+        if (!folder.query_exists ()) {
+            try {
+                folder.make_directory ();
+            } catch (Error e) {
+                warning ("Could not create directory %s", folder.get_path ());
+            }
         }
 
-        dialog.set_current_folder ("/home/jeremy/Templates");
+        dialog.set_current_folder ( folder.get_path ());
 
         var response = dialog.run ();
 
