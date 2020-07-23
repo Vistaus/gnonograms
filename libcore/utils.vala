@@ -404,17 +404,7 @@ namespace Utils {
             grid.show_all ();
         }
 
-        var path = Path.build_filename (Environment.get_home_dir (), ".local", "share", Gnonograms.APP_ID);
-        var folder = File.new_for_path (path);
-        if (!folder.query_exists ()) {
-            try {
-                folder.make_directory ();
-            } catch (Error e) {
-                warning ("Could not create directory %s", folder.get_path ());
-            }
-        }
-
-        dialog.set_current_folder ( folder.get_path ());
+        dialog.set_current_folder (get_path_to_data_dir ());
 
         var response = dialog.run ();
 
@@ -455,6 +445,21 @@ namespace Utils {
         var monitor = display.get_monitor_at_window (window);
         rect = monitor.get_geometry ();
         return rect;
+    }
+
+    public string get_path_to_data_dir () {
+        var path = Path.build_filename (Environment.get_home_dir (), ".local", "share", Gnonograms.APP_ID);
+        var folder = File.new_for_path (path);
+        if (!folder.query_exists ()) {
+            try {
+                folder.make_directory ();
+            } catch (Error e) {
+                warning ("Could not create directory %s", folder.get_path ());
+                return Environment.get_user_data_dir ();
+            }
+        }
+
+        return folder.get_path ();
     }
 }
 }

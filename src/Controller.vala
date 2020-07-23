@@ -94,14 +94,10 @@ public class Controller : GLib.Object {
             saved_state = new Settings ("com.github.jeremypw.gnonograms.saved-state");
         }
 
-        string data_home_folder_current = Path.build_path (Path.DIR_SEPARATOR_S,
-                                                           Environment.get_user_data_dir (),
-                                                           APP_NAME,
-                                                           "unsaved"
-                                                           );
+        string unsaved_folder_current = Path.build_filename (Utils.get_path_to_data_dir (), "unsaved");
         File file;
         try {
-            file = File.new_for_path (data_home_folder_current);
+            file = File.new_for_path (unsaved_folder_current);
             file.make_directory_with_parents (null);
         } catch (GLib.Error e) {
             if (!(e is IOError.EXISTS)) {
@@ -110,8 +106,7 @@ public class Controller : GLib.Object {
         }
 
         current_game_path = null;
-        temporary_game_path = Path.build_path (Path.DIR_SEPARATOR_S, data_home_folder_current,
-                                               Gnonograms.UNSAVED_FILENAME);
+        temporary_game_path = Path.build_filename (unsaved_folder_current, Gnonograms.UNSAVED_FILENAME);
 
         restore_settings (); /* May change load_game_dir and save_game_dir */
 
@@ -143,7 +138,7 @@ public class Controller : GLib.Object {
         if (game != null) {
             load_game.begin (game, true, (obj, res) => {
                 if (!load_game.end (res)) {
-                    warning ("Load game failed");
+                    debug ("Load game failed");
                     restore_dimensions ();
                     new_or_random_game ();
                 }
@@ -248,19 +243,6 @@ public class Controller : GLib.Object {
     }
 
     private void save_game_state () {
-        if (saved_state == null) {
-            return;
-        }
-
-        int x, y;
-        window.get_position (out x, out y);
-        saved_state.set_int ("window-x", x);
-        saved_state.set_int ("window-y", y);
-
-        if (current_game_path != null) {
-            saved_state.set_string ("current-game-path", current_game_path);
-        }
-
         if (temporary_game_path != null) {
             try {
                 var current_game = File.new_for_path (temporary_game_path);
@@ -272,6 +254,19 @@ public class Controller : GLib.Object {
                 /* Save solution and current state */
                 write_game (temporary_game_path, true);
             }
+        }
+
+        if (saved_state == null) {
+            return;
+        }
+
+        int x, y;
+        window.get_position (out x, out y);
+        saved_state.set_int ("window-x", x);
+        saved_state.set_int ("window-y", y);
+
+        if (current_game_path != null) {
+            saved_state.set_string ("current-game-path", current_game_path);
         }
     }
 
