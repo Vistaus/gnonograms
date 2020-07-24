@@ -12,7 +12,8 @@
       "--socket=fallback-x11",
       "--socket=wayland",
       "--device=dri",
-      "--filesystem=~/.local/share/com.github.jeremypw.gnonograms"
+      "--filesystem=~/.local/share/com.github.jeremypw.gnonograms:create",
+      "--persist=~/.local/share/com.github.jeremypw.gnonograms"
     ],
 
     "cleanup": [
