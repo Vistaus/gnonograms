@@ -362,14 +362,13 @@ namespace Utils {
                 break;
         }
 
-        var dialog = new Gtk.FileChooserDialog (
-                        dialogname,
-                        parent,
+        var dialog = new Gtk.FileChooserNative (
+                        dialogname, parent,
                         gtk_action,
-                        _("Cancel"), Gtk.ResponseType.CANCEL,
-                        button_label, Gtk.ResponseType.ACCEPT,
-                        null
-                    );
+                        button_label,
+                        _("Cancel")
+                     );
+
 
             foreach (var info in filters) {
                 var fc = new Gtk.FileFilter ();
@@ -377,13 +376,15 @@ namespace Utils {
                 foreach (var pattern in info.patterns) {
                     fc.add_pattern (pattern);
                 }
+
                 dialog.add_filter (fc);
             }
 
         dialog.local_only = true;
+
         Gtk.Switch? save_solution_switch = null;
 
-        //only need access to built-in puzzle directory if loading a .gno puzzle
+        /* only need access to built-in puzzle directory if loading a .gno puzzle */
         if (action != Gnonograms.FileChooserAction.OPEN) {
             var grid = new Gtk.Grid ();
             grid.orientation = Gtk.Orientation.HORIZONTAL;
@@ -399,7 +400,7 @@ namespace Utils {
                 grid.add (save_solution_switch);
             }
 
-            ((Gtk.Container)(dialog.get_action_area ())).add (grid);
+            dialog.set_extra_widget (grid);
 
             grid.show_all ();
         }
@@ -410,10 +411,7 @@ namespace Utils {
 
         if (response == Gtk.ResponseType.ACCEPT) {
             if (gtk_action == Gtk.FileChooserAction.SAVE) {
-                file_path = Path.build_path (Path.DIR_SEPARATOR_S,
-                                             dialog.get_current_folder (),
-                                             dialog.get_current_name ()
-                            );
+                file_path = Path.build_filename (dialog.get_current_folder (), dialog.get_current_name ());
             } else {
                 file_path = dialog.get_filename ();
             }
@@ -425,15 +423,7 @@ namespace Utils {
 
         dialog.destroy ();
 
-        if (gtk_action == Gtk.FileChooserAction.SAVE && file_path != null) {
-            var file = File.new_for_commandline_arg (file_path);
-            if (file.query_exists () &&
-                !show_confirm_dialog (_("Overwrite %s").printf (file_path),
-                                      _("This action will destroy contents of that file"))) {
-
-                file_path = null;
-            }
-        }
+warning ("File path for loading or saving: %s", file_path);
 
         return file_path;
     }
