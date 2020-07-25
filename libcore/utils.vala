@@ -327,14 +327,14 @@ namespace Utils {
     /** The @action parameter also indicates the default setting for saving the solution.
       * The user selected option is returned in @save_solution.
      **/
-    public static string? get_file_path (Gtk.Window? parent,
-                                          Gnonograms.FileChooserAction action,
-                                          string dialogname,
-                                          FilterInfo [] filters,
-                                          string? start_path,
-                                          out bool save_solution) {
+    public static File? get_input_output_file (Gtk.Window? parent,
+                                                   Gnonograms.FileChooserAction action,
+                                                   string dialogname,
+                                                   FilterInfo [] filters,
+                                                   string? start_path,
+                                                   out bool save_solution) {
 
-        string? file_path = null;
+        File? io_file = null;
 
         save_solution = (action == Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION);
 
@@ -382,6 +382,10 @@ namespace Utils {
 
         dialog.local_only = true;
 
+        if (start_path != null) {
+            dialog.set_current_folder (start_path);
+        }
+
         Gtk.Switch? save_solution_switch = null;
 
         /* only need access to built-in puzzle directory if loading a .gno puzzle */
@@ -405,16 +409,19 @@ namespace Utils {
             grid.show_all ();
         }
 
-        dialog.set_current_folder (get_path_to_data_dir ());
-
         var response = dialog.run ();
 
         if (response == Gtk.ResponseType.ACCEPT) {
-            if (gtk_action == Gtk.FileChooserAction.SAVE) {
-                file_path = Path.build_filename (dialog.get_current_folder (), dialog.get_current_name ());
-            } else {
-                file_path = dialog.get_filename ();
+            io_file = dialog.get_file ();
+
+            if (gtk_action == FileChooserAction.SAVE) {
+                var basename = io_file.get_basename ();
+                if (!(basename.has_suffix (Gnonograms.GAMEFILEEXTENSION))) {
+                    io_file = File.new_for_path (Path.build_filename (io_file.get_parent ().get_path (),
+                                                                       basename + Gnonograms.GAMEFILEEXTENSION));
+                }
             }
+
 
             if (save_solution_switch != null) {
                 save_solution = save_solution_switch.state;
@@ -423,9 +430,7 @@ namespace Utils {
 
         dialog.destroy ();
 
-warning ("File path for loading or saving: %s", file_path);
-
-        return file_path;
+        return io_file;
     }
 
     public Gdk.Rectangle get_monitor_area (Gdk.Screen screen, Gdk.Window window) {

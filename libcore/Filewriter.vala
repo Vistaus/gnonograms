@@ -41,12 +41,15 @@ public class Filewriter : Object {
     public My2DCellArray? solution { get; set; default = null;}
     public My2DCellArray? working { get; set; default = null;}
 
+    /** PRIVATE **/
+    private FileOutputStream? output_stream;
+    private FileIOStream? stream;
 
     public Filewriter (Gtk.Window? parent,
                        Dimensions dimensions,
                        string[] row_clues,
                        string[] col_clues,
-                       History? history) throws IOError {
+                       History? history) throws Error {
 
         Object (
             name: _(UNTITLED_NAME),
@@ -65,8 +68,8 @@ public class Filewriter : Object {
 
     /*** Writes minimum information required for valid game file ***/
     public void write_game_file (string? save_dir_path = null,
-                                 string? path = null,
-                                 string? _name = null) throws IOError {
+                                 File? save_file = null,
+                                 string? _name = null) throws Error {
 
         if (_name != null) {
             name = _name;
@@ -74,51 +77,50 @@ public class Filewriter : Object {
             name = _(UNTITLED_NAME);
         }
 
-        if (path == null || path.length <= 4) {
-            game_path = get_save_file_path (parent, save_dir_path);
+        File? game_file = null;
+        if (save_file == null) {
+            game_file = get_save_file (parent, save_dir_path);
         } else {
-            game_path = path;
+            game_file = save_file;
         }
 
-        if (game_path != null &&
-            (game_path.length < 4 ||
-             game_path[-4 : game_path.length] != Gnonograms.GAMEFILEEXTENSION)) {
-
-            game_path = game_path + Gnonograms.GAMEFILEEXTENSION;
+        if (game_file == null) {
+            throw new IOError.CANCELLED ("No game file selected");
         }
 
-        if (game_path == null) {
-            throw new IOError.CANCELLED ("No path selected");
+        if (!game_file.query_exists ()) {
+            stream = game_file.create_readwrite  (FileCreateFlags.NONE, null);
+        } else {
+            stream = game_file.open_readwrite ();
         }
-
-        stream = FileStream.open (game_path, "w"); /* This requires local path, not a uri */
 
         if (stream == null) {
             throw new IOError.FAILED ("Could not open filestream to %s".printf (game_path));
         }
 
+        output_stream = (FileOutputStream)stream.output_stream;
         if (name == null || name.length == 0) {
             throw new IOError.NOT_INITIALIZED ("No name to save");
         }
 
-        stream.printf ("[Description]\n");
-        stream.printf ("%s\n", name);
-        stream.printf ("%s\n", author);
-        stream.printf ("%s\n", date.to_string ());
-        stream.printf ("%u\n", difficulty);
+        output_stream.write ("[Description]\n".data);
+        output_stream.write (("%s\n".printf (name)).data);
+        output_stream.write (("%s\n".printf (author)).data);
+        output_stream.write (("%s\n".printf (date.to_string ())).data);
+        output_stream.write (("%u\n".printf (difficulty)).data);
 
         if (license == null || license.length > 0) {
-            stream.printf ("[License]\n");
-            stream.printf ("%s\n", license);
+            output_stream.write ("[License]\n".data);
+            output_stream.write (("%s\n".printf (license)).data);
         }
 
         if (rows == 0 || cols == 0) {
             throw new IOError.NOT_INITIALIZED ("No dimensions to save");
         }
 
-        stream.printf ("[Dimensions]\n");
-        stream.printf ("%u\n", rows);
-        stream.printf ("%u\n", cols);
+        output_stream.write ("[Dimensions]\n".data);
+        output_stream.write (("%u\n".printf (rows)).data);
+        output_stream.write (("%u\n".printf (cols)).data);
 
         if (row_clues.length == 0 || col_clues.length == 0) {
             throw new IOError.NOT_INITIALIZED ("No clues to save");
@@ -128,76 +130,75 @@ public class Filewriter : Object {
             throw new IOError.NOT_INITIALIZED ("Clues do not match dimensions");
         }
 
-        stream.printf ("[Row clues]\n");
+        output_stream.write ("[Row clues]\n".data);
         foreach (string s in row_clues) {
-            stream.printf ("%s\n", s);
+            output_stream.write (("%s\n".printf (s)).data);
         }
 
-        stream.printf ("[Column clues]\n");
+        output_stream.write ("[Column clues]\n".data);
         foreach (string s in col_clues) {
-            stream.printf ("%s\n", s);
+            output_stream.write (("%s\n".printf (s)).data);
         }
-
-        stream.flush ();
 
         if (solution != null && save_solution) {
-            stream.printf ("[Solution grid]\n");
-            stream.printf ("%s", solution.to_string ());
+            output_stream.write ("[Solution grid]\n".data);
+            output_stream.write (("%s".printf (solution.to_string ())).data);
         }
 
-        stream.printf ("[Locked]\n");
-        stream.printf (is_readonly.to_string () + "\n");
+        output_stream.write ("[Locked]\n".data);
+        output_stream.write ((is_readonly.to_string () + "\n").data);
     }
 
     /*** Writes complete information to reload game state ***/
     public void write_position_file (string? save_dir_path = null,
-                                     string? path = null,
-                                     string? name = null) throws IOError {
+                                     File? game_file = null,
+                                     string? name = null) throws Error {
+
         if (working == null) {
             throw (new IOError.NOT_INITIALIZED ("No working grid to save"));
         } else if (game_state == GameState.UNDEFINED) {
             throw (new IOError.NOT_INITIALIZED ("No game state to save"));
         }
 
-        write_game_file (save_dir_path, path, name );
-        stream.printf ("[Working grid]\n");
-        stream.printf (working.to_string ());
-        stream.printf ("[State]\n");
-        stream.printf (game_state.to_string () + "\n");
+        write_game_file (save_dir_path, game_file, name);
+
+        output_stream.write ("[Working grid]\n".data);
+        output_stream.write (working.to_string ().data);
+        output_stream.write ("[State]\n".data);
+        output_stream.write ((game_state.to_string () + "\n").data);
 
         if (name != _(UNTITLED_NAME)) {
-            stream.printf ("[Original path]\n");
-            stream.printf (game_path.to_string () + "\n");
+            output_stream.write ("[Original path]\n".data);
+            output_stream.write ((game_file.get_path () + "\n").data);
         }
 
         if (history != null) {
-            stream.printf ("[History]\n");
-            stream.printf (history.to_string () + "\n");
+            output_stream.write ("[History]\n".data);
+            output_stream.write ((history.to_string () + "\n").data);
         }
-
-        stream.flush ();
     }
 
-    /** PRIVATE **/
-    private FileStream? stream;
+    private File? get_save_file (Gtk.Window? parent, string? save_dir_path) {
 
-    private string? get_save_file_path (Gtk.Window? parent, string? save_dir_path) {
+        var action = Gnonograms.FileChooserAction.SAVE_NO_SOLUTION;
 
-        var action = save_solution && solution != null ?
-                     Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION : Gnonograms.FileChooserAction.SAVE_NO_SOLUTION;
+        if (save_solution && solution != null) {
+            action = Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION;
+        }
 
-        bool with_solution;
+        bool with_solution = true;
         FilterInfo info = {_("Gnonogram puzzles"), {"*" + Gnonograms.GAMEFILEEXTENSION}};
         FilterInfo [] filters = {info};
-        var path = Utils.get_file_path (parent,
-            action,
-            _("Name and save this puzzle"),
-            filters,
-            save_dir_path,
-            out with_solution // cannot use save_solution directly (will not compile)
-        );
+        File? io_file = Utils.get_input_output_file (
+                                parent,
+                                action,
+                                _("Name and save this puzzle"),
+                                filters,
+                                save_dir_path,
+                                out with_solution // cannot use save_solution directly (will not compile)
+                            );
 
-        if (path != null) {
+        if (io_file != null) {
             save_solution = with_solution;
 
             if (!save_solution && solution != null) {
@@ -207,7 +208,7 @@ public class Filewriter : Object {
             }
         }
 
-        return path;
+        return io_file;
     }
 }
 }

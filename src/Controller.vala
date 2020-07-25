@@ -244,16 +244,8 @@ public class Controller : GLib.Object {
 
     private void save_game_state () {
         if (temporary_game_path != null) {
-            try {
-                var current_game = File.new_for_path (temporary_game_path);
-                current_game.@delete ();
-            } catch (GLib.Error e) {
-                /* Error normally thrown on first run */
-                debug ("Error deleting temporary game file %s - %s", temporary_game_path, e.message);
-            } finally {
-                /* Save solution and current state */
-                write_game (temporary_game_path, true);
-            }
+            var current_game = File.new_for_path (temporary_game_path);
+            write_game (current_game, true);
         }
 
         if (saved_state == null) {
@@ -323,18 +315,18 @@ public class Controller : GLib.Object {
         }
     }
 
-    private string? write_game (string? path, bool save_state = false) {
+    private string? write_game (File? game_file, bool save_state = false) {
         Filewriter? file_writer = null;
         var gs = game_state;
         game_state = GameState.UNDEFINED;
 
         try {
             file_writer = new Filewriter (window,
-                                          dimensions,
-                                          model.get_row_clues (),
-                                          model.get_col_clues (),
-                                          history
-                                        );
+                                           dimensions,
+                                           model.get_row_clues (),
+                                           model.get_col_clues (),
+                                           history
+                                          );
 
             file_writer.difficulty = view.game_grade;
             file_writer.game_state = gs;
@@ -343,15 +335,14 @@ public class Controller : GLib.Object {
             file_writer.is_readonly = is_readonly;
 
             if (save_state) {
-                file_writer.write_position_file (save_game_dir, path, game_name);
+                file_writer.write_position_file (save_game_dir, game_file, game_name);
             } else {
-                file_writer.write_game_file (save_game_dir, path, game_name);
+                file_writer.write_game_file (save_game_dir, game_file, game_name);
             }
 
-        } catch (IOError e) {
+        } catch (Error e) {
             if (!(e is IOError.CANCELLED)) {
-                var basename = Path.get_basename (file_writer.game_path);
-                Utils.show_error_dialog (_("Unable to save %s").printf (basename), e.message);
+                Utils.show_error_dialog (_("Unable to save %s").printf (game_file.get_basename ()), e.message);
             }
 
             return null;
@@ -587,7 +578,8 @@ public class Controller : GLib.Object {
         if (is_readonly || current_game_path == temporary_game_path) {
             on_save_game_as_request ();
         } else {
-            var path = write_game (current_game_path, false);
+            var current_game = File.new_for_path (current_game_path);
+            var path = write_game (current_game, false);
 
             if (path != null && path != "") {
                 current_game_path = path;

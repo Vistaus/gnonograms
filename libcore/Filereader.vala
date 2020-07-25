@@ -84,7 +84,7 @@ public class Filereader : Object {
 
         FilterInfo info = {_("Gnonogram puzzles"), {"*" + Gnonograms.GAMEFILEEXTENSION}};
         FilterInfo [] filters = {info};
-        string? path = Utils.get_file_path (
+        File? io_file = Utils.get_input_output_file (
                             parent,
                             Gnonograms.FileChooserAction.OPEN,
                             _("Choose a puzzle"),
@@ -93,11 +93,7 @@ public class Filereader : Object {
                             null
                         );
 
-        if (path == null || path == "") {
-            return null;
-        } else {
-            return File.new_for_path (path);
-        }
+        return io_file;
     }
 
     private void parse_gnonogram_game_file (DataInputStream stream) throws GLib.IOError {
