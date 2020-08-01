@@ -324,108 +324,49 @@ namespace Utils {
         return response == Gtk.ResponseType.YES;
     }
 
-    /** The @action parameter also indicates the default setting for saving the solution.
-      * The user selected option is returned in @save_solution.
-     **/
-    public static File? get_input_output_file (Gtk.Window? parent,
-                                                   Gnonograms.FileChooserAction action,
-                                                   string dialogname,
-                                                   FilterInfo [] filters,
-                                                   string? start_path,
-                                                   out bool save_solution) {
-
+    public static string? get_folder_path (Gtk.Window? parent) {
         File? io_file = null;
 
-        save_solution = (action == Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION);
-
-        string button_label = "Error";
-        var gtk_action = Gtk.FileChooserAction.SAVE;
-
-        switch (action) {
-            case Gnonograms.FileChooserAction.OPEN:
-                gtk_action = Gtk.FileChooserAction.OPEN;
-                button_label = _("Open");
-                break;
-
-            case Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION:
-            case Gnonograms.FileChooserAction.SAVE_NO_SOLUTION:
-                gtk_action = Gtk.FileChooserAction.SAVE;
-                button_label = _("Save");
-                break;
-
-            case Gnonograms.FileChooserAction.SELECT_FOLDER:
-                gtk_action = Gtk.FileChooserAction.SELECT_FOLDER;
-                button_label = _("Apply");
-                break;
-
-            default :
-                break;
-        }
-
         var dialog = new Gtk.FileChooserNative (
-                        dialogname, parent,
-                        gtk_action,
-                        button_label,
+                        _("Select Game Folder"), parent,
+                        Gtk.FileChooserAction.SELECT_FOLDER,
+                        _("Select"),
                         _("Cancel")
                      );
-
-
-            foreach (var info in filters) {
-                var fc = new Gtk.FileFilter ();
-                fc.set_filter_name (info.name);
-                foreach (var pattern in info.patterns) {
-                    fc.add_pattern (pattern);
-                }
-
-                dialog.add_filter (fc);
-            }
-
-        dialog.local_only = true;
-
-        if (start_path != null) {
-            dialog.set_current_folder (start_path);
-        }
-
-        Gtk.Switch? save_solution_switch = null;
-
-        /* only need access to built-in puzzle directory if loading a .gno puzzle */
-        if (action != Gnonograms.FileChooserAction.OPEN) {
-            var grid = new Gtk.Grid ();
-            grid.orientation = Gtk.Orientation.HORIZONTAL;
-            grid.column_spacing = 6;
-
-            if (action == Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION) {
-                save_solution_switch = new Gtk.Switch ();
-                save_solution_switch.state = save_solution;
-
-                var save_solution_label = new Gtk.Label (_("Save solution too"));
-
-                grid.add (save_solution_label);
-                grid.add (save_solution_switch);
-            }
-
-            dialog.set_extra_widget (grid);
-
-            grid.show_all ();
-        }
 
         var response = dialog.run ();
 
         if (response == Gtk.ResponseType.ACCEPT) {
             io_file = dialog.get_file ();
+        }
 
-            if (gtk_action == FileChooserAction.SAVE) {
-                var basename = io_file.get_basename ();
-                if (!(basename.has_suffix (Gnonograms.GAMEFILEEXTENSION))) {
-                    io_file = File.new_for_path (Path.build_filename (io_file.get_parent ().get_path (),
-                                                                       basename + Gnonograms.GAMEFILEEXTENSION));
-                }
-            }
+        dialog.destroy ();
+
+        return io_file != null ? io_file.get_path () : null;
+    }
+
+    public static File? get_input_file (Gtk.Window? parent) {
+
+        File? io_file = null;
+
+        var dialog = new Gtk.FileChooserNative (
+                        _("Load Gnonograms Game"), parent,
+                        Gtk.FileChooserAction.OPEN,
+                        _("Open"),
+                        _("Cancel")
+                     );
 
 
-            if (save_solution_switch != null) {
-                save_solution = save_solution_switch.state;
-            }
+        var fc = new Gtk.FileFilter ();
+        fc.set_filter_name (_("Gnonogram puzzles"));
+        fc.add_pattern ("*" + Gnonograms.GAMEFILEEXTENSION);
+        dialog.add_filter (fc);
+        dialog.local_only = true;
+
+        var response = dialog.run ();
+
+        if (response == Gtk.ResponseType.ACCEPT) {
+            io_file = dialog.get_file ();
         }
 
         dialog.destroy ();

@@ -56,16 +56,8 @@ public class Filereader : Object {
         }
     }
 
-    public Filereader (Gtk.Window? parent, string? load_dir_path, File? game) throws GLib.IOError {
+    public Filereader (File game) throws GLib.IOError {
         Object (game_file: game);
-
-        if (game == null) {
-            game_file = get_load_game_file (parent, load_dir_path);
-        }
-
-        if (game_file == null) {
-            throw new IOError.CANCELLED ("Load game file dialog cancelled");
-        }
 
         DataInputStream stream;
         try {
@@ -76,26 +68,9 @@ public class Filereader : Object {
         }
 
         parse_gnonogram_game_file (stream);
-
     }
 
     /** PRIVATE **/
-    private File? get_load_game_file (Gtk.Window? parent, string? load_dir_path) {
-
-        FilterInfo info = {_("Gnonogram puzzles"), {"*" + Gnonograms.GAMEFILEEXTENSION}};
-        FilterInfo [] filters = {info};
-        File? io_file = Utils.get_input_output_file (
-                            parent,
-                            Gnonograms.FileChooserAction.OPEN,
-                            _("Choose a puzzle"),
-                            filters,
-                            load_dir_path,
-                            null
-                        );
-
-        return io_file;
-    }
-
     private void parse_gnonogram_game_file (DataInputStream stream) throws GLib.IOError {
         size_t header_length, body_length;
         string[] headings = {};

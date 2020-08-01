@@ -27,6 +27,7 @@ class AppMenu : Gtk.MenuButton {
     private AppSetting columns_setting;
     private AppSetting title_setting;
     private AppSetting strikeout_setting;
+    private AppSetting save_solution_setting;
     private Gtk.Grid grid;
 
     public Dimensions dimensions { get; set; }
@@ -36,6 +37,7 @@ class AppMenu : Gtk.MenuButton {
         set { controller.game_name = value; }
     }
     public bool strikeout_complete { get; set; }
+    public bool save_solution { get; set; }
     public unowned Controller controller { get; construct; }
 
     construct {
@@ -50,6 +52,7 @@ class AppMenu : Gtk.MenuButton {
         columns_setting = new ScaleGrid (_("Columns"));
         title_setting = new TitleEntry ();
         strikeout_setting = new SettingSwitch (_("Strike out complete blocks"));
+        save_solution_setting = new SettingSwitch (_("Save solution with game"));
 
         int pos = 0;
         add_setting (ref pos, grade_setting);
@@ -57,6 +60,7 @@ class AppMenu : Gtk.MenuButton {
         add_setting (ref pos, columns_setting);
         add_setting (ref pos, title_setting);
         add_setting (ref pos, strikeout_setting);
+        add_setting (ref pos, save_solution_setting);
 
         app_popover = new AppPopover ();
         app_popover.add (grid);
@@ -79,6 +83,10 @@ class AppMenu : Gtk.MenuButton {
 
         notify["strikeout-complete"].connect (() => {
             update_strikeout_setting ();
+        });
+
+        notify["save-solution"].connect (() => {
+            update_save_solution_setting ();
         });
 
         toggled.connect (() => { /* Allow parent to set values first */
@@ -115,6 +123,10 @@ class AppMenu : Gtk.MenuButton {
 
     private void update_strikeout_setting () {
         strikeout_setting.state = strikeout_complete;
+    }
+
+    private void update_save_solution_setting () {
+        save_solution_setting.state = save_solution;
     }
 
     private void update_properties () {

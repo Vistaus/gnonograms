@@ -37,7 +37,6 @@ public class Filewriter : Object {
     public string license { get; set; default = "";}
     public Difficulty difficulty { get; set; default = Difficulty.UNDEFINED;}
     public GameState game_state { get; set; default = GameState.UNDEFINED;}
-    private bool save_solution = true;
     public My2DCellArray? solution { get; set; default = null;}
     public My2DCellArray? working { get; set; default = null;}
 
@@ -67,26 +66,9 @@ public class Filewriter : Object {
     }
 
     /*** Writes minimum information required for valid game file ***/
-    public void write_game_file (string? save_dir_path = null,
-                                 File? save_file = null,
-                                 string? _name = null) throws Error {
-
-        if (_name != null) {
-            name = _name;
-        } else {
-            name = _(UNTITLED_NAME);
-        }
-
-        File? game_file = null;
-        if (save_file == null) {
-            game_file = get_save_file (parent, save_dir_path);
-        } else {
-            game_file = save_file;
-        }
-
-        if (game_file == null) {
-            throw new IOError.CANCELLED ("No game file selected");
-        }
+    public void write_game_file (File game_file,
+                                 string name,
+                                 bool save_solution) throws Error {
 
         if (!game_file.query_exists ()) {
             stream = game_file.create_readwrite  (FileCreateFlags.NONE, null);
@@ -150,9 +132,9 @@ public class Filewriter : Object {
     }
 
     /*** Writes complete information to reload game state ***/
-    public void write_position_file (string? save_dir_path = null,
-                                     File? game_file = null,
-                                     string? name = null) throws Error {
+    public void write_position_file (File game_file,
+                                     string name,
+                                     bool save_solution) throws Error {
 
         if (working == null) {
             throw (new IOError.NOT_INITIALIZED ("No working grid to save"));
@@ -160,7 +142,7 @@ public class Filewriter : Object {
             throw (new IOError.NOT_INITIALIZED ("No game state to save"));
         }
 
-        write_game_file (save_dir_path, game_file, name);
+        write_game_file (game_file, name, save_solution);
 
         output_stream.write ("[Working grid]\n".data);
         output_stream.write (working.to_string ().data);
@@ -176,39 +158,6 @@ public class Filewriter : Object {
             output_stream.write ("[History]\n".data);
             output_stream.write ((history.to_string () + "\n").data);
         }
-    }
-
-    private File? get_save_file (Gtk.Window? parent, string? save_dir_path) {
-
-        var action = Gnonograms.FileChooserAction.SAVE_NO_SOLUTION;
-
-        if (save_solution && solution != null) {
-            action = Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION;
-        }
-
-        bool with_solution = true;
-        FilterInfo info = {_("Gnonogram puzzles"), {"*" + Gnonograms.GAMEFILEEXTENSION}};
-        FilterInfo [] filters = {info};
-        File? io_file = Utils.get_input_output_file (
-                                parent,
-                                action,
-                                _("Name and save this puzzle"),
-                                filters,
-                                save_dir_path,
-                                out with_solution // cannot use save_solution directly (will not compile)
-                            );
-
-        if (io_file != null) {
-            save_solution = with_solution;
-
-            if (!save_solution && solution != null) {
-                save_solution = !Utils.show_confirm_dialog (_("Confirm save without solution"),
-                                                            _("Do not save computer insoluble clues without solution"),
-                                                            parent);
-            }
-        }
-
-        return io_file;
     }
 }
 }

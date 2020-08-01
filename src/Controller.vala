@@ -30,7 +30,6 @@ public class Controller : GLib.Object {
     public Dimensions dimensions { get; set; }
     public Difficulty generator_grade { get; set; }
     public string game_name { get; set; }
-
     /* Any game that was not saved by this app is regarded as read only - any alterations
      * must be "Saved As" - which by default is writable. */
     public bool is_readonly { get; set; default = false;}
@@ -42,8 +41,7 @@ public class Controller : GLib.Object {
     private GLib.Settings? settings;
     private GLib.Settings? saved_state;
     private Gnonograms.History history;
-    private string? save_game_dir = null;
-    private string? load_game_dir = null;
+
     private string current_game_path;
     private string? temporary_game_path = null;
 
@@ -108,7 +106,7 @@ public class Controller : GLib.Object {
         current_game_path = null;
         temporary_game_path = Path.build_filename (unsaved_folder_current, Gnonograms.UNSAVED_FILENAME);
 
-        restore_settings (); /* May change load_game_dir and save_game_dir */
+        restore_settings ();
 
         var flags = BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL;
         bind_property ("dimensions", model, "dimensions");
@@ -136,7 +134,7 @@ public class Controller : GLib.Object {
 
     public Controller (File? game = null) {
         if (game != null) {
-            load_game.begin (game, true, (obj, res) => {
+            load_game.begin (game, (obj, res) => {
                 if (!load_game.end (res)) {
                     debug ("Load game failed");
                     restore_dimensions ();
@@ -178,7 +176,6 @@ public class Controller : GLib.Object {
             generator.cancel ();
         }
 
-        save_settings ();
         quit_app ();
     }
 
@@ -262,28 +259,8 @@ public class Controller : GLib.Object {
         }
     }
 
-    private void save_settings () {
-        if (settings == null) {
-            return;
-        }
-
-        settings.set_string ("save-game-dir", save_game_dir ?? "");
-        settings.set_string ("load-game-dir", load_game_dir ?? "");
-    }
-
     private void restore_settings () {
         if (settings != null) {
-            var dir = settings.get_string ("load-game-dir");
-            if (dir.length > 0) {
-                load_game_dir = dir;
-            }
-
-            dir = settings.get_string ("save-game-dir");
-
-            if (dir.length > 0) {
-                save_game_dir = dir;
-            }
-
             int x, y;
             x = saved_state.get_int ("window-x");
             y = saved_state.get_int ("window-y");
@@ -309,13 +286,13 @@ public class Controller : GLib.Object {
     private async bool restore_game () {
         if (temporary_game_path != null) {
             var current_game = File.new_for_path (temporary_game_path);
-            return yield load_game (current_game, false);
+            return yield load_game (current_game);
         } else {
             return false;
         }
     }
 
-    private string? write_game (File? game_file, bool save_state = false) {
+    private string? write_game (File game_file, bool save_state) {
         Filewriter? file_writer = null;
         var gs = game_state;
         game_state = GameState.UNDEFINED;
@@ -335,9 +312,9 @@ public class Controller : GLib.Object {
             file_writer.is_readonly = is_readonly;
 
             if (save_state) {
-                file_writer.write_position_file (save_game_dir, game_file, game_name);
+                file_writer.write_position_file (game_file, game_name, view.save_solution);
             } else {
-                file_writer.write_game_file (save_game_dir, game_file, game_name);
+                file_writer.write_game_file (game_file, game_name, view.save_solution);
             }
 
         } catch (Error e) {
@@ -353,17 +330,26 @@ public class Controller : GLib.Object {
         return file_writer.game_path;
     }
 
-    private async bool load_game (File? game, bool update_load_dir) {
+    private async bool load_game (File? game) {
         Filereader? reader = null;
         var gs = game_state;
         game_state = GameState.UNDEFINED;
         clear_history ();
 
+        File? file_to_load = game;
+        if (game == null) {
+            file_to_load = Utils.get_input_file (view);
+        }
+
+        if (file_to_load == null) {
+            return false;
+        }
+
         try {
-            reader = new Filereader (window, load_game_dir, game);
+            reader = new Filereader (file_to_load);
         } catch (GLib.IOError e) {
             if (!(e is IOError.CANCELLED)) {
-                var basename = game != null ? game.get_basename () : _("game");
+                var basename = file_to_load.get_basename ();
 
                 if (reader != null && reader.game_file != null) {
                     basename = reader.game_file.get_basename ();
@@ -381,11 +367,6 @@ public class Controller : GLib.Object {
         }
 
         if (reader.valid && (yield load_common (reader))) {
-            if (update_load_dir) {
-                /* At this point, we can assume game_file exists and has parent */
-                load_game_dir = reader.game_file.get_parent ().get_uri ();
-            }
-
             if (reader.state != GameState.UNDEFINED) {
                 game_state = reader.state;
             } else {
@@ -396,11 +377,6 @@ public class Controller : GLib.Object {
 
             if (history.can_go_back) {
                 make_move (history.get_current_move ());
-            }
-
-            if (update_load_dir) {
-                /* At this point, we can assume game_file exists and has parent */
-                load_game_dir = reader.game_file.get_parent ().get_uri ();
             }
         } else {
             view.send_notification (_("Unable to load game. %s").printf (reader.err_msg));
@@ -428,6 +404,7 @@ public class Controller : GLib.Object {
 
         model.blank_working (); // Do not reveal solution on load
 
+        view.save_solution = reader.has_solution;
         if (reader.has_solution) {
             view.game_grade = reader.difficulty;
             model.set_solution_data_from_string_array (reader.solution[0 : rows]);
@@ -579,7 +556,7 @@ public class Controller : GLib.Object {
             on_save_game_as_request ();
         } else {
             var current_game = File.new_for_path (current_game_path);
-            var path = write_game (current_game, false);
+            var path = write_game (current_game, true);
 
             if (path != null && path != "") {
                 current_game_path = path;
@@ -589,8 +566,17 @@ public class Controller : GLib.Object {
     }
 
     private void on_save_game_as_request () {
-        /* Filewriter will request save location, no solution saved as default */
-        var path = write_game (null, false);
+        string? save_game_path = Utils.get_folder_path (view);
+        if (save_game_path == null) {
+            return;
+        }
+
+        var basename = game_name.has_suffix (Gnonograms.GAMEFILEEXTENSION) ? game_name :
+                        game_name + Gnonograms.GAMEFILEEXTENSION;
+
+        var current_game = File.new_build_filename (save_game_path, basename);
+        /* Does not save state when creating new game file */
+        var path = write_game (current_game, false);
 
         if (path != null) {
             current_game_path = path;
@@ -604,7 +590,7 @@ public class Controller : GLib.Object {
     }
 
     private void on_open_game_request () {
-        load_game.begin (null, true); /* Filereader will request load location */
+        load_game.begin (null);
     }
 
     private void on_solve_this_request () {

@@ -44,6 +44,7 @@ public class View : Gtk.ApplicationWindow {
     public Difficulty generator_grade { get; set; }
     public GameState game_state { get; set; }
     public bool strikeout_complete { get; set; }
+    public bool save_solution { get; set; default = true;}
     public string game_name { get { return controller.game_name; } }
     public bool readonly { get; set; default = false;}
     public Difficulty game_grade { get; set; default = Difficulty.UNDEFINED;}
@@ -363,6 +364,7 @@ public class View : Gtk.ApplicationWindow {
         bind_property ("generator-grade", app_menu, "grade", flags);
         controller.bind_property ("game-name", app_menu, "title", flags);
         bind_property ("strikeout-complete", app_menu, "strikeout-complete", flags);
+        bind_property ("save-solution", app_menu, "save-solution", flags);
         bind_property ("game-state", mode_switch, "mode", flags);
         bind_property ("current-cell", cell_grid, "current-cell", BindingFlags.BIDIRECTIONAL);
         bind_property ("previous-cell", cell_grid, "previous-cell", BindingFlags.BIDIRECTIONAL);
