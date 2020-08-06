@@ -566,15 +566,7 @@ public class Controller : GLib.Object {
     }
 
     private void on_save_game_as_request () {
-        string? save_game_path = Utils.get_folder_path (view);
-        if (save_game_path == null) {
-            return;
-        }
-
-        var basename = game_name.has_suffix (Gnonograms.GAMEFILEEXTENSION) ? game_name :
-                        game_name + Gnonograms.GAMEFILEEXTENSION;
-
-        var current_game = File.new_for_path (Path.build_filename (save_game_path, basename));
+        File current_game = Utils.get_output_file (view);
         /* Does not save state when creating new game file */
         var path = write_game (current_game, false);
 

@@ -2,18 +2,13 @@
     "app-id": "com.github.jeremypw.gnonograms",
     "base": "io.elementary.BaseApp",
     "base-version": "juno-19.08",
-    "runtime": "org.freedesktop.Platform",
-    "runtime-version": "19.08",
-    "sdk": "org.freedesktop.Sdk",
     "command": "com.github.jeremypw.gnonograms",
 
     "finish-args": [
       "--share=ipc",
       "--socket=fallback-x11",
       "--socket=wayland",
-      "--device=dri",
-      "--filesystem=~/.local/share/com.github.jeremypw.gnonograms:create",
-      "--persist=~/.local/share/com.github.jeremypw.gnonograms"
+      "--device=dri"
     ],
 
     "cleanup": [

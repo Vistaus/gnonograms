@@ -324,27 +324,6 @@ namespace Utils {
         return response == Gtk.ResponseType.YES;
     }
 
-    public static string? get_folder_path (Gtk.Window? parent) {
-        File? io_file = null;
-
-        var dialog = new Gtk.FileChooserNative (
-                        _("Select Game Folder"), parent,
-                        Gtk.FileChooserAction.SELECT_FOLDER,
-                        _("Select"),
-                        _("Cancel")
-                     );
-
-        var response = dialog.run ();
-
-        if (response == Gtk.ResponseType.ACCEPT) {
-            io_file = dialog.get_file ();
-        }
-
-        dialog.destroy ();
-
-        return io_file != null ? io_file.get_path () : null;
-    }
-
     public static File? get_input_file (Gtk.Window? parent) {
 
         File? io_file = null;
@@ -356,11 +335,29 @@ namespace Utils {
                         _("Cancel")
                      );
 
+        dialog.local_only = true;
 
-        var fc = new Gtk.FileFilter ();
-        fc.set_filter_name (_("Gnonogram puzzles"));
-        fc.add_pattern ("*" + Gnonograms.GAMEFILEEXTENSION);
-        dialog.add_filter (fc);
+        var response = dialog.run ();
+
+        if (response == Gtk.ResponseType.ACCEPT) {
+            io_file = dialog.get_file ();
+        }
+
+        dialog.destroy ();
+
+        return io_file;
+    }
+
+    public static File? get_output_file (Gtk.Window? parent) {
+
+        File? io_file = null;
+
+        var dialog = new Gtk.FileChooserNative (
+                        _("Load Gnonograms Game"), parent,
+                        Gtk.FileChooserAction.SAVE,
+                        _("Save"),
+                        _("Cancel")
+                     );
         dialog.local_only = true;
 
         var response = dialog.run ();
