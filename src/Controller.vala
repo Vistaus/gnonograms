@@ -331,11 +331,6 @@ public class Controller : GLib.Object {
     }
 
     private async bool load_game (File? game) {
-        Filereader? reader = null;
-        var gs = game_state;
-        game_state = GameState.UNDEFINED;
-        clear_history ();
-
         File? file_to_load = game;
         if (game == null) {
             file_to_load = Utils.get_input_file (view);
@@ -344,6 +339,11 @@ public class Controller : GLib.Object {
         if (file_to_load == null) {
             return false;
         }
+
+        Filereader? reader = null;
+        var gs = game_state;
+        game_state = GameState.UNDEFINED;
+        clear_history ();
 
         try {
             reader = new Filereader (file_to_load);
