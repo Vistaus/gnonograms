@@ -574,7 +574,7 @@ public class Controller : GLib.Object {
         var basename = game_name.has_suffix (Gnonograms.GAMEFILEEXTENSION) ? game_name :
                         game_name + Gnonograms.GAMEFILEEXTENSION;
 
-        var current_game = File.new_build_filename (save_game_path, basename);
+        var current_game = File.new_for_path (Path.build_filename (save_game_path, basename));
         /* Does not save state when creating new game file */
         var path = write_game (current_game, false);
 
