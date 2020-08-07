@@ -30,7 +30,6 @@ public class Filewriter : Object {
     public string[] col_clues { get; construct; }
     public History? history { get; construct; }
     public Gtk.Window? parent { get; construct; }
-    public string? game_path { get; private set; }
 
     public bool is_readonly { get; set; default = true;}
     public string author { get; set; default = "";}
@@ -77,7 +76,7 @@ public class Filewriter : Object {
         }
 
         if (stream == null) {
-            throw new IOError.FAILED ("Could not open filestream to %s".printf (game_path));
+            throw new IOError.FAILED ("Could not open filestream to %s".printf (game_file.get_path ()));
         }
 
         output_stream = (FileOutputStream)stream.output_stream;

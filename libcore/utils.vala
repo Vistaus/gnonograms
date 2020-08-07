@@ -325,7 +325,6 @@ namespace Utils {
     }
 
     public static File? get_input_file (Gtk.Window? parent) {
-
         File? io_file = null;
 
         var dialog = new Gtk.FileChooserNative (

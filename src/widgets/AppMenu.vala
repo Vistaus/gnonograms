@@ -132,7 +132,10 @@ class AppMenu : Gtk.MenuButton {
     private void update_properties () {
         var rows = rows_setting.@value;
         var cols = columns_setting.@value;
-        dimensions = {cols, rows};
+        if (dimensions.cols () != cols || dimensions.rows () != rows) {
+            dimensions = {cols, rows};
+        }
+
         grade = (Difficulty)(grade_setting.@value);
         title = title_setting.text;
         strikeout_complete = strikeout_setting.state;

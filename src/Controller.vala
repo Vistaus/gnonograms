@@ -292,7 +292,7 @@ public class Controller : GLib.Object {
         }
     }
 
-    private string? write_game (File game_file, bool save_state) {
+    private bool write_game (File game_file, bool save_state) {
         Filewriter? file_writer = null;
         var gs = game_state;
         game_state = GameState.UNDEFINED;
@@ -322,12 +322,12 @@ public class Controller : GLib.Object {
                 Utils.show_error_dialog (_("Unable to save %s").printf (game_file.get_basename ()), e.message);
             }
 
-            return null;
+            return false;
         } finally {
             game_state = gs;
         }
 
-        return file_writer.game_path;
+        return true;
     }
 
     private async bool load_game (File? game) {
@@ -556,11 +556,9 @@ public class Controller : GLib.Object {
             on_save_game_as_request ();
         } else {
             var current_game = File.new_for_path (current_game_path);
-            var path = write_game (current_game, true);
 
-            if (path != null && path != "") {
-                current_game_path = path;
-                notify_saved (path);
+            if (write_game (current_game, true)) {
+                notify_saved (current_game_path);
             }
         }
     }
@@ -568,12 +566,13 @@ public class Controller : GLib.Object {
     private void on_save_game_as_request () {
         File current_game = Utils.get_output_file (view);
         /* Does not save state when creating new game file */
-        var path = write_game (current_game, false);
+        is_readonly = false;
 
-        if (path != null) {
-            current_game_path = path;
-            notify_saved (path);
-            is_readonly = false;
+        if (write_game (current_game, false)) {
+            current_game_path = current_game.get_path ();
+            notify_saved (current_game_path);
+        } else {
+            is_readonly = true;
         }
     }
 
