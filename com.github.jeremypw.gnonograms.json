@@ -2,9 +2,6 @@
     "app-id": "com.github.jeremypw.gnonograms",
     "base": "io.elementary.BaseApp",
     "base-version": "juno-19.08",
-    "runtime": "org.freedesktop.Platform",
-    "runtime-version": "19.08",
-    "sdk": "org.freedesktop.Sdk",
     "command": "com.github.jeremypw.gnonograms",
 
     "finish-args": [
@@ -35,7 +32,7 @@
                 {
                     "type": "git",
                     "url": "https://github.com/jeremypw/gnonograms.git",
-                    "branch": "add-flatpak-manifest"
+                    "branch": "use-filechoosernative"
                 }
             ]
         }

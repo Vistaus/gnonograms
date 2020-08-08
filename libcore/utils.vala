@@ -324,124 +324,6 @@ namespace Utils {
         return response == Gtk.ResponseType.YES;
     }
 
-    /** The @action parameter also indicates the default setting for saving the solution.
-      * The user selected option is returned in @save_solution.
-     **/
-    public static string? get_file_path (Gtk.Window? parent,
-                                          Gnonograms.FileChooserAction action,
-                                          string dialogname,
-                                          FilterInfo [] filters,
-                                          string? start_path,
-                                          out bool save_solution) {
-
-        string? file_path = null;
-
-        save_solution = (action == Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION);
-
-        string button_label = "Error";
-        var gtk_action = Gtk.FileChooserAction.SAVE;
-
-        switch (action) {
-            case Gnonograms.FileChooserAction.OPEN:
-                gtk_action = Gtk.FileChooserAction.OPEN;
-                button_label = _("Open");
-                break;
-
-            case Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION:
-            case Gnonograms.FileChooserAction.SAVE_NO_SOLUTION:
-                gtk_action = Gtk.FileChooserAction.SAVE;
-                button_label = _("Save");
-                break;
-
-            case Gnonograms.FileChooserAction.SELECT_FOLDER:
-                gtk_action = Gtk.FileChooserAction.SELECT_FOLDER;
-                button_label = _("Apply");
-                break;
-
-            default :
-                break;
-        }
-
-        var dialog = new Gtk.FileChooserDialog (
-                        dialogname,
-                        parent,
-                        gtk_action,
-                        _("Cancel"), Gtk.ResponseType.CANCEL,
-                        button_label, Gtk.ResponseType.ACCEPT,
-                        null
-                    );
-
-            foreach (var info in filters) {
-                var fc = new Gtk.FileFilter ();
-                fc.set_filter_name (info.name);
-                foreach (var pattern in info.patterns) {
-                    fc.add_pattern (pattern);
-                }
-                dialog.add_filter (fc);
-            }
-
-        dialog.local_only = false;
-        Gtk.Switch? save_solution_switch = null;
-
-        //only need access to built-in puzzle directory if loading a .gno puzzle
-        if (action != Gnonograms.FileChooserAction.OPEN) {
-            var grid = new Gtk.Grid ();
-            grid.orientation = Gtk.Orientation.HORIZONTAL;
-            grid.column_spacing = 6;
-
-            if (action == Gnonograms.FileChooserAction.SAVE_WITH_SOLUTION) {
-                save_solution_switch = new Gtk.Switch ();
-                save_solution_switch.state = save_solution;
-
-                var save_solution_label = new Gtk.Label (_("Save solution too"));
-
-                grid.add (save_solution_label);
-                grid.add (save_solution_switch);
-            }
-
-            ((Gtk.Container)(dialog.get_action_area ())).add (grid);
-
-            grid.show_all ();
-        }
-
-        if (start_path == null) {
-            start_path = Environment.get_home_dir ();
-        }
-
-        dialog.set_current_folder ("/home/jeremy/Templates");
-
-        var response = dialog.run ();
-
-        if (response == Gtk.ResponseType.ACCEPT) {
-            if (gtk_action == Gtk.FileChooserAction.SAVE) {
-                file_path = Path.build_path (Path.DIR_SEPARATOR_S,
-                                             dialog.get_current_folder (),
-                                             dialog.get_current_name ()
-                            );
-            } else {
-                file_path = dialog.get_filename ();
-            }
-
-            if (save_solution_switch != null) {
-                save_solution = save_solution_switch.state;
-            }
-        }
-
-        dialog.destroy ();
-
-        if (gtk_action == Gtk.FileChooserAction.SAVE && file_path != null) {
-            var file = File.new_for_commandline_arg (file_path);
-            if (file.query_exists () &&
-                !show_confirm_dialog (_("Overwrite %s").printf (file_path),
-                                      _("This action will destroy contents of that file"))) {
-
-                file_path = null;
-            }
-        }
-
-        return file_path;
-    }
-
     public Gdk.Rectangle get_monitor_area (Gdk.Screen screen, Gdk.Window window) {
         Gdk.Rectangle rect;
 
@@ -449,6 +331,26 @@ namespace Utils {
         var monitor = display.get_monitor_at_window (window);
         rect = monitor.get_geometry ();
         return rect;
+    }
+
+    public string get_path_to_data_dir () {
+        var user_data_path = Environment.get_user_data_dir ();
+
+        if (!user_data_path.contains (Gnonograms.APP_ID)) {
+            user_data_path = Path.build_path (Path.DIR_SEPARATOR_S, user_data_path, Gnonograms.APP_ID);
+        }
+
+        var folder = File.new_for_path (user_data_path);
+        if (!folder.query_exists ()) {
+            try {
+                folder.make_directory ();
+            } catch (Error e) {
+                warning ("Could not create directory %s", folder.get_path ());
+                return Environment.get_user_data_dir ();
+            }
+        }
+
+        return folder.get_path ();
     }
 }
 }

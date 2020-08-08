@@ -24,7 +24,6 @@ public class App : Gtk.Application {
 
     construct {
         application_id = Gnonograms.APP_ID;
-        flags = ApplicationFlags.HANDLES_OPEN;
 
         SimpleAction quit_action = new SimpleAction ("quit", null);
         quit_action.activate.connect (() => {
@@ -41,32 +40,11 @@ public class App : Gtk.Application {
         base.startup ();
     }
 
-    public override void open (File[] files, string hint) {
-        /* Only one game can be played at a time */
-        var file = files[0];
-
-        if (file == null) {
-            return;
-        }
-
-        var fname = file.get_basename ();
-
-        if (fname.has_suffix (".gno")) {
-            open_file (file);
-        } else {
-            activate ();
-        }
-    }
-
-    public void open_file (File? game) {
-        controller = new Controller (game);
+    public override void activate () {
+        controller = new Controller ();
         this.add_window (controller.window);
 
         controller.quit_app.connect (quit);
-    }
-
-    public override void activate () {
-        open_file (null);
     }
 }
 
