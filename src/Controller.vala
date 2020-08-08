@@ -42,8 +42,12 @@ public class Controller : GLib.Object {
     private GLib.Settings? saved_state;
     private Gnonograms.History history;
 
-    private string current_game_path;
+    private string? current_game_path = null;
     private string? temporary_game_path = null;
+
+    private string saved_game_folder;
+    private string unsaved_game_folder;
+
 
     private bool is_solving {get {return game_state == GameState.SOLVING;}}
     private uint rows {get {return dimensions.rows ();}}
@@ -92,10 +96,20 @@ public class Controller : GLib.Object {
             saved_state = new Settings ("com.github.jeremypw.gnonograms.saved-state");
         }
 
-        string unsaved_folder_current = Path.build_filename (Utils.get_path_to_data_dir (), "unsaved");
+        unsaved_game_folder = Path.build_filename (Utils.get_path_to_data_dir (), "unsaved");
         File file;
         try {
-            file = File.new_for_path (unsaved_folder_current);
+            file = File.new_for_path (unsaved_game_folder);
+            file.make_directory_with_parents (null);
+        } catch (GLib.Error e) {
+            if (!(e is IOError.EXISTS)) {
+                warning ("Could not make %s - %s", file.get_uri (), e.message);
+            }
+        }
+
+        saved_game_folder = Path.build_filename (Utils.get_path_to_data_dir (), "games");
+        try {
+            file = File.new_for_path (saved_game_folder);
             file.make_directory_with_parents (null);
         } catch (GLib.Error e) {
             if (!(e is IOError.EXISTS)) {
@@ -104,7 +118,7 @@ public class Controller : GLib.Object {
         }
 
         current_game_path = null;
-        temporary_game_path = Path.build_filename (unsaved_folder_current, Gnonograms.UNSAVED_FILENAME);
+        temporary_game_path = Path.build_filename (unsaved_game_folder, Gnonograms.UNSAVED_FILENAME);
 
         restore_settings ();
 
@@ -114,8 +128,6 @@ public class Controller : GLib.Object {
         bind_property ("generator-grade", view, "generator-grade", flags);
         bind_property ("game-state", model, "game-state");
         bind_property ("game-state", view, "game-state", flags);
-        bind_property ("is-readonly", view, "readonly", BindingFlags.SYNC_CREATE);
-
 
         history.bind_property ("can-go-back", view, "can-go-back", BindingFlags.SYNC_CREATE);
         history.bind_property ("can-go-forward", view, "can-go-forward", BindingFlags.SYNC_CREATE);
@@ -132,25 +144,15 @@ public class Controller : GLib.Object {
         }
     }
 
-    public Controller (File? game = null) {
-        if (game != null) {
-            load_game.begin (game, (obj, res) => {
-                if (!load_game.end (res)) {
-                    debug ("Load game failed");
-                    restore_dimensions ();
-                    new_or_random_game ();
-                }
-            });
-        } else {
-            restore_game.begin ((obj, res) => {
-                if (!restore_game.end (res)) {
-                    /* Error normally thrown if running without installing */
-                    debug ("Restore game failed");
-                    restore_dimensions ();
-                    new_game ();
-                }
-            });
-        }
+    public Controller () {
+        restore_game.begin ((obj, res) => {
+            if (!restore_game.end (res)) {
+                /* Error normally thrown if running without installing */
+                debug ("Restore game failed");
+                restore_dimensions ();
+                new_or_random_game ();
+            }
+        });
 
         view.show_all ();
         view.present ();
@@ -284,12 +286,7 @@ public class Controller : GLib.Object {
     }
 
     private async bool restore_game () {
-        if (temporary_game_path != null) {
-            var current_game = File.new_for_path (temporary_game_path);
-            return yield load_game (current_game);
-        } else {
-            return false;
-        }
+        return yield load_game (unsaved_game_folder, Gnonograms.UNSAVED_FILENAME);
     }
 
     private bool write_game (File game_file, bool save_state) {
@@ -330,10 +327,13 @@ public class Controller : GLib.Object {
         return true;
     }
 
-    private async bool load_game (File? game) {
-        File? file_to_load = game;
-        if (game == null) {
-            file_to_load = Utils.get_input_file (view);
+    private async bool load_game (string root_path, string? suggested_name = null) {
+        File? file_to_load = null;
+        if (suggested_name == null) {
+            var chooser = new Gnonograms.GameChooser (view, root_path, Gtk.FileChooserAction.OPEN, suggested_name);
+            file_to_load = chooser.run ();
+        } else {
+            file_to_load = File.new_for_path (Path.build_filename (Path.DIR_SEPARATOR_S, root_path, suggested_name));
         }
 
         if (file_to_load == null) {
@@ -564,9 +564,17 @@ public class Controller : GLib.Object {
     }
 
     private void on_save_game_as_request () {
-        File current_game = Utils.get_output_file (view);
+        var chooser = new Gnonograms.GameChooser (view,
+                                                    saved_game_folder,
+                                                    Gtk.FileChooserAction.SAVE,
+                                                    game_name);
+
+        File? current_game = chooser.run ();
         /* Does not save state when creating new game file */
         is_readonly = false;
+        if (current_game == null) {
+            return;
+        }
 
         if (write_game (current_game, false)) {
             current_game_path = current_game.get_path ();
@@ -581,7 +589,7 @@ public class Controller : GLib.Object {
     }
 
     private void on_open_game_request () {
-        load_game.begin (null);
+        load_game.begin (saved_game_folder, null);
     }
 
     private void on_solve_this_request () {

@@ -34,6 +34,7 @@ executable (
     'libcore/widgets/Labelbox.vala',
     'libcore/widgets/Label.vala',
     'libcore/widgets/Cellgrid.vala',
+    'libcore/widgets/GameChooser.vala',
     'libcore/AbstractPatternGenerator.vala',
     'libcore/AbstractGameGenerator.vala',
     'libcore/AbstractSolver.vala',

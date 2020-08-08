@@ -46,7 +46,6 @@ public class View : Gtk.ApplicationWindow {
     public bool strikeout_complete { get; set; }
     public bool save_solution { get; set; default = true;}
     public string game_name { get { return controller.game_name; } }
-    public bool readonly { get; set; default = false;}
     public Difficulty game_grade { get; set; default = Difficulty.UNDEFINED;}
     public double fontheight { get; set; }
     public bool can_go_back { get; set; }
@@ -394,8 +393,8 @@ public class View : Gtk.ApplicationWindow {
             title_label.label = game_name;
         });
 
-        notify["readonly"].connect (() => {
-            save_game_button.sensitive = readonly;
+        controller.notify["is-readonly"].connect (() => {
+            save_game_button.sensitive = !controller.is_readonly;
         });
 
         notify["can-go-back"].connect (() => {

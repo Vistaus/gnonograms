@@ -324,52 +324,6 @@ namespace Utils {
         return response == Gtk.ResponseType.YES;
     }
 
-    public static File? get_input_file (Gtk.Window? parent) {
-        File? io_file = null;
-
-        var dialog = new Gtk.FileChooserNative (
-                        _("Load Gnonograms Game"), parent,
-                        Gtk.FileChooserAction.OPEN,
-                        _("Open"),
-                        _("Cancel")
-                     );
-
-        dialog.local_only = true;
-
-        var response = dialog.run ();
-
-        if (response == Gtk.ResponseType.ACCEPT) {
-            io_file = dialog.get_file ();
-        }
-
-        dialog.destroy ();
-
-        return io_file;
-    }
-
-    public static File? get_output_file (Gtk.Window? parent) {
-
-        File? io_file = null;
-
-        var dialog = new Gtk.FileChooserNative (
-                        _("Load Gnonograms Game"), parent,
-                        Gtk.FileChooserAction.SAVE,
-                        _("Save"),
-                        _("Cancel")
-                     );
-        dialog.local_only = true;
-
-        var response = dialog.run ();
-
-        if (response == Gtk.ResponseType.ACCEPT) {
-            io_file = dialog.get_file ();
-        }
-
-        dialog.destroy ();
-
-        return io_file;
-    }
-
     public Gdk.Rectangle get_monitor_area (Gdk.Screen screen, Gdk.Window window) {
         Gdk.Rectangle rect;
 
@@ -380,8 +334,13 @@ namespace Utils {
     }
 
     public string get_path_to_data_dir () {
-        var path = Path.build_filename (Environment.get_home_dir (), ".local", "share", Gnonograms.APP_ID);
-        var folder = File.new_for_path (path);
+        var user_data_path = Environment.get_user_data_dir ();
+
+        if (!user_data_path.contains (Gnonograms.APP_ID)) {
+            user_data_path = Path.build_path (Path.DIR_SEPARATOR_S, user_data_path, Gnonograms.APP_ID);
+        }
+
+        var folder = File.new_for_path (user_data_path);
         if (!folder.query_exists ()) {
             try {
                 folder.make_directory ();
